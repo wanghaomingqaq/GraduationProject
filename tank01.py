@@ -10,35 +10,35 @@ from time import time
 import seaborn as sns
 sns.set(color_codes=True)
 startTime1 = time()
-X_train = pd.read_csv('./data/dataset03.csv',usecols=['L_T1','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3'])
-X_test = pd.read_csv('./data/test_dataset.csv',usecols=['L_T1','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3'])
+X_train = pd.read_csv('./data/dataset03.csv',usecols=['L_T1','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','P_J280','P_J269','P_J300','P_J256','P_J289','P_J415','P_J302','P_J306','P_J307','P_J317','P_J14','P_J422'])
+X_test = pd.read_csv('./data/test_dataset.csv',usecols=['L_T1','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','P_J280','P_J269','P_J300','P_J256','P_J289','P_J415','P_J302','P_J306','P_J307','P_J317','P_J14','P_J422'])
 
 act_func = 'relu'
 # Input layer:
 model=Sequential()
 # First hidden layer, connected to input vector X.
-model.add(Dense(10,activation=act_func,
+model.add(Dense(21,activation=act_func,
                 kernel_initializer='glorot_uniform',
                 kernel_regularizer=regularizers.l2(0.0),
                 input_shape=(X_train.shape[1],)
                )
          )
 
-model.add(Dense(2,activation=act_func,
+model.add(Dense(8,activation=act_func,
                 kernel_initializer='glorot_uniform'))
 
-model.add(Dense(10,activation=act_func,
+model.add(Dense(21,activation=act_func,
                 kernel_initializer='glorot_uniform'))
-
+model.add(Dense(8,activation=act_func,
+                kernel_initializer='glorot_uniform'))
 model.add(Dense(X_train.shape[1],
                 kernel_initializer='glorot_uniform'))
-
 model.compile(loss='mse',optimizer='adam')
 
 print(model.summary())
 
 # Train model for 100 epochs, batch size of 10:
-NUM_EPOCHS=100
+NUM_EPOCHS=10
 BATCH_SIZE=10
 history=model.fit(np.array(X_train),np.array(X_train),
                   batch_size=BATCH_SIZE,
@@ -71,7 +71,7 @@ X_pred = model.predict(np.array(X_test))
 X_pred = pd.DataFrame(X_pred,
                       columns=X_test.columns)
 X_pred.index = X_test.index
-threshod = 0.4
+threshod = 0.5
 scored = pd.DataFrame(index=X_test.index)
 scored['Loss_mae'] = np.mean(np.abs(X_pred-X_test), axis = 1)
 scored['Threshold'] = threshod

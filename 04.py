@@ -1,5 +1,3 @@
-import tensorflow as tf
-import os
 import pandas as pd
 import matplotlib.pyplot as plt
 from tensorflow.keras.layers import Dense
@@ -7,50 +5,79 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras import regularizers
 import numpy as np
 from time import time
-from matplotlib import pyplot as plt
-from tensorflow.keras.layers import Conv1D, BatchNormalization, Activation, MaxPool2D, Dropout, Flatten, Dense
-from tensorflow.keras import Model
+import seaborn as sns
+sns.set(color_codes=True)
+startTime1 = time()
+X_train = pd.read_csv('./data/dataset03.csv',usecols=['L_T4','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','P_J280','P_J269','P_J300','P_J256','P_J289','P_J415','P_J302','P_J306','P_J307','P_J317','P_J14','P_J422'])
+X_test = pd.read_csv('./data/test_dataset.csv',usecols=['L_T4','F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','P_J280','P_J269','P_J300','P_J256','P_J289','P_J415','P_J302','P_J306','P_J307','P_J317','P_J14','P_J422'])
 
-np.set_printoptions(threshold=np.inf)
-
-# cifar10 = tf.keras.datasets.cifar10
-# (x_train, y_train), (x_test, y_test) = cifar10.load_data()
-# x_train, x_test = x_train / 255.0, x_test / 255.0
-X_train = pd.read_csv('./data/dataset03.csv',usecols=['F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','L_T1'])
-X_test = pd.read_csv('./data/test_dataset.csv',usecols=['F_PU1','S_PU1','S_PU2','F_PU2','S_PU3','F_PU3','L_T1'])
 act_func = 'relu'
-# X_train = [X_train.L_T1,[X_train.F_PU1,X_train.F_PU2,X_train.F_PU3,[X_train.S_PU1,X_train.S_PU2,X_train.S_PU3]]]
-# X_test = [X_test.L_T1,[X_test.F_PU1,X_test.F_PU2,X_test.F_PU3,[X_test.S_PU1,X_test.S_PU2,X_test.S_PU3]]]
-
-print(X_train)
+# Input layer:
 model=Sequential()
-
-model.add(Conv1D(filters=6,
-                 kernel_size=3,
-                 padding='same'))
-model.add(BatchNormalization())
-model.add(Activation('relu'))
-model.add(MaxPool2D(pool_size=(2, 2), strides=2, padding='same'))
-model.add(Dropout(0.2))
-
-
-model.add(Dense(10,activation=act_func,
+# First hidden layer, connected to input vector X.
+model.add(Dense(21,activation=act_func,
                 kernel_initializer='glorot_uniform',
                 kernel_regularizer=regularizers.l2(0.0),
-                input_shape=(7,)
+                input_shape=(X_train.shape[1],)
                )
          )
 
-model.add(Dense(2,activation=act_func,
+model.add(Dense(8,activation=act_func,
                 kernel_initializer='glorot_uniform'))
 
-model.add(Dense(10,activation=act_func,
+model.add(Dense(21,activation=act_func,
                 kernel_initializer='glorot_uniform'))
-
-model.add(Dense(7,
+model.add(Dense(8,activation=act_func,
+                kernel_initializer='glorot_uniform'))
+model.add(Dense(X_train.shape[1],
                 kernel_initializer='glorot_uniform'))
 
 model.compile(loss='mse',optimizer='adam')
-history = model.fit(np.array(X_train), np.array(X_train), batch_size=32, epochs=5, validation_data=(np.array(X_test), np.array(X_test)), validation_freq=1
-                    )
+
 print(model.summary())
+
+# Train model for 100 epochs, batch size of 10:
+NUM_EPOCHS=3000
+BATCH_SIZE=10
+history=model.fit(np.array(X_train),np.array(X_train),
+                  batch_size=BATCH_SIZE,
+                  epochs=NUM_EPOCHS,
+                  validation_split=0.05,
+                  verbose = 1)
+
+plt.plot(history.history['loss'],
+         'b',
+         label='Training loss')
+plt.legend(loc='upper right')
+plt.xlabel('Epochs')
+plt.ylabel('Loss, [mse]')
+plt.show()
+X_pred = model.predict(np.array(X_train))
+X_pred = pd.DataFrame(X_pred,
+                      columns=X_train.columns)
+print(X_pred)
+X_pred.index = X_train.index
+scored = pd.DataFrame(index=X_train.index)
+scored['Loss_mae'] = np.mean(np.abs(X_pred-X_train), axis = 1)
+plt.figure()
+sns.distplot(scored['Loss_mae'],
+             bins = 10,
+             kde= True,
+            color = 'blue')
+plt.xlim([0.0,1.5])
+plt.show()
+X_pred = model.predict(np.array(X_test))
+X_pred = pd.DataFrame(X_pred,
+                      columns=X_test.columns)
+X_pred.index = X_test.index
+threshod = 0.9
+scored = pd.DataFrame(index=X_test.index)
+scored['Loss_mae'] = np.mean(np.abs(X_pred-X_test), axis = 1)
+scored['Threshold'] = threshod
+scored['Anomaly'] = scored['Loss_mae'] > scored['Threshold']
+scored.head()
+scored.plot(logy=True,  figsize = (10,6), ylim = [1e-2,1e2], color = ['blue','green'])
+plt.show()
+t1 = time() - startTime1
+
+print(t1)
